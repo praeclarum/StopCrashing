@@ -26,3 +26,10 @@ For example:
 `fsharpi --exec StopCrashing.fsx Path/To/MySolution.sln`
 
 This will find a binary for every project in `MySolution.sln` and report its bad methods.
+
+
+
+[MC]: http://www.mono-project.com/docs/tools+libraries/libraries/Mono.Cecil/
+[Calca]: http://calca.io
+[git]: http://github.com/praeclarum/StopCrashing
+

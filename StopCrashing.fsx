@@ -10,14 +10,15 @@ open System.IO
 open Mono.Cecil
 open Mono.Cecil.Cil
 
-let rec diagnoseBinary (binPath : string) =
+let readerParams =
     let res = DefaultAssemblyResolver ()
     res.AddSearchDirectory "/Library/Frameworks/Xamarin.Mac.framework/Versions/Current/lib/mono"
     res.AddSearchDirectory "/Library/Frameworks/Xamarin.iOS.framework/Versions/Current/lib/mono/2.1"
-    let rps = ReaderParameters ()
-    rps.AssemblyResolver <- res
-    let m = ModuleDefinition.ReadModule (binPath, rps)
-    m.Types |> Seq.filter isUITypeDesc |> Seq.collect diagnoseType
+    ReaderParameters (AssemblyResolver = res)
+
+let rec diagnoseBinary (binPath : string) =
+    let m = ModuleDefinition.ReadModule (binPath, readerParams)
+    m.Types |> Seq.filter isUITypeDesc |> Seq.collect diagnoseType |> List.ofSeq
 
 and diagnoseType t =
     t.Methods |> Seq.filter isUIMethod |> Seq.filter isBadMethod
@@ -121,29 +122,38 @@ let diagnoseSln slnPath =
     |> Seq.sortBy (fun x -> x.DeclaringType.FullName + x.Name) |> List.ofSeq
 
 
+let diagnoseFile path =
+    let badMethods =
+        match (Path.GetExtension (path)).ToLowerInvariant () with
+        | ".sln" -> diagnoseSln path
+        | ".dll" | ".exe" -> diagnoseBinary path
+        | x -> failwithf "StopCrashing doesn't know what to do with %s files" x
+
+    let fc = Console.ForegroundColor
+    if badMethods.Length = 0 then
+        Console.ForegroundColor <- ConsoleColor.Green
+        printfn "GOOD JOB WITH %s!" path
+    else
+        printfn "%d UI METHODS IN %s NEED EXCEPTION HANDLERS" badMethods.Length path
+        Console.ForegroundColor <- ConsoleColor.Red
+        for t in badMethods do
+            printfn "    %s.%s" t.DeclaringType.FullName t.Name
+    Console.ForegroundColor <- fc
+
+    badMethods
+
+
 //
 // Entrypoint
 //
 
-let argv = fsi.CommandLineArgs |> Seq.skip 1 |> Array.ofSeq
+let argv = fsi.CommandLineArgs |> Seq.skip 1 |> List.ofSeq
 
 if argv.Length < 1 then
-    printfn "StopCrashing.exe [Solution.sln]"
+    printfn "StopCrashing.exe [Solution.sln] [Library.dll] [App.exe]"
     1
 else
-    
-    let slnPath = argv.[0]
-    let badMethods = diagnoseSln slnPath
-
-    if badMethods.Length = 0 then
-        Console.ForegroundColor <- ConsoleColor.Green
-        printfn "GOOD JOB WITH %s!" slnPath
-    else
-        printfn "%d UI METHODS IN %s NEED EXCEPTION HANDLERS" badMethods.Length slnPath
-        Console.ForegroundColor <- ConsoleColor.Red
-        for t in badMethods do
-            printfn "    %s.%s" t.DeclaringType.FullName t.Name
-
+    let badMethods = argv |> List.collect diagnoseFile
     if badMethods.Length > 0 then 2 else 0
 
 
