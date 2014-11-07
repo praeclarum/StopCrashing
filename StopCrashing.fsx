@@ -18,7 +18,12 @@ let readerParams =
 
 let rec diagnoseBinary (binPath : string) =
     let m = ModuleDefinition.ReadModule (binPath, readerParams)
-    m.Types |> Seq.filter isUITypeDesc |> Seq.collect diagnoseType |> List.ofSeq
+    let rec getTypes (t : TypeDefinition) =
+        t :: (t.NestedTypes |> Seq.collect getTypes |> List.ofSeq)
+    m.Types
+    |> Seq.collect getTypes 
+    |> Seq.filter isUITypeDesc 
+    |> Seq.collect diagnoseType |> List.ofSeq
 
 and diagnoseType t =
     t.Methods |> Seq.filter isUIMethod |> Seq.filter isBadMethod
@@ -150,7 +155,7 @@ let diagnoseFile path =
 let argv = fsi.CommandLineArgs |> Seq.skip 1 |> List.ofSeq
 
 if argv.Length < 1 then
-    printfn "StopCrashing.exe [Solution.sln] [Library.dll] [App.exe]"
+    printfn "StopCrashing.fsx [Solution.sln] [Library.dll] [App.exe]"
     1
 else
     let badMethods = argv |> List.collect diagnoseFile
