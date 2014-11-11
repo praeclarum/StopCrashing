@@ -1,6 +1,8 @@
 ﻿// StopCrashing.fsx by Frank A. Krueger @praeclarum
 
 #r "System.Xml"
+#r "System"
+#I "./"
 #r "Mono.Cecil.dll"
 
 open System
@@ -46,10 +48,12 @@ and isVirtualUIMethod (m : MethodDefinition) =
         let dt = m.DeclaringType
         if isUIType dt then true
         else
-            let bt = dt.BaseType.Resolve ()
-            match bt.Methods |> Seq.tryFind (fun x -> x.Name = m.Name) with
-            | Some bm -> isVirtualUIMethod bm
-            | None -> false
+            let mutable isV = false
+            let mutable bt = dt.BaseType.Resolve ()
+            while not isV && bt <> null do
+                isV <- bt.Methods |> Seq.exists (fun x -> x.Name = m.Name && isVirtualUIMethod x)
+                bt <- if bt.BaseType <> null then bt.BaseType.Resolve () else null
+            isV
 
 and isExportAttr (m : CustomAttribute) =
     m.Constructor.DeclaringType.Name = "ExportAttribute"
@@ -64,9 +68,12 @@ and isUIType (t : TypeReference) =
     else
         let n = t.FullName
         n.StartsWith ("MonoMac.AppKit.")
-        || n.StartsWith ("MonoTouch.UIKit.")
         || n.StartsWith ("AppKit.")
+        || n.StartsWith ("MonoTouch.UIKit.")
         || n.StartsWith ("UIKit.")
+        || n.StartsWith ("MonoMac.SceneKit.")
+        || n.StartsWith ("MonoTouch.SceneKit.")
+        || n.StartsWith ("SceneKit.")
 
 and isUITypeDesc (t : TypeReference) =
     if t = null then false
@@ -152,7 +159,11 @@ let diagnoseFile path =
 // Entrypoint
 //
 
+#if INTERACTIVE
 let argv = fsi.CommandLineArgs |> Seq.skip 1 |> List.ofSeq
+#else
+let argv = ["Test.sln"]
+#endif
 
 if argv.Length < 1 then
     printfn "StopCrashing.fsx [Solution.sln] [Library.dll] [App.exe]"
