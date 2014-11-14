@@ -102,6 +102,7 @@ let diagnoseSln slnPath =
         File.ReadAllLines slnPath
         |> Seq.choose projLine
         |> Seq.map (fun x -> Path.Combine (d, fixDir x))
+        |> Seq.filter (fun x -> (Path.GetExtension (x)).Length > 2) // Avoid directories (and ., ..)
 
     let getProjectBin (projPath : string) : string =
         let proj = XmlDocument ()
