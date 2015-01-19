@@ -227,7 +227,7 @@ let diagnoseFile path =
     else
         printfn "%d UI METHODS IN %s NEED EXCEPTION HANDLERS" badMethods.Length path
         Console.ForegroundColor <- ConsoleColor.Red
-        for t, c in badMethods do
+        for t, c in badMethods |> Seq.sortBy (fun (m, _) -> m.DeclaringType.FullName) do
             match c with
             | Some context -> printfn "    %s.%s (%s.%s)" t.DeclaringType.FullName t.Name context.DeclaringType.FullName context.Name
             | _ -> printfn "    %s.%s" t.DeclaringType.FullName t.Name
