@@ -11,7 +11,7 @@ What are these calls? Well, there are a lot of them:
 
 This script uses [Mono.Cecil][MC] to scan all the byte code of your application to find these entrypoints.
 
-It is able to detect #1, #2, and #3 above with the exception of methods that take don't take their callback as the last argument.
+It is able to detect #1, #2, and #3 above with the exception of methods that take don't take their callback as the last argument. Also it cannot properly track async methods yet.
 
 It then detects whether you have any exception handling in that code. If you do not, it yells at you.
 

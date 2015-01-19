@@ -92,6 +92,8 @@ and isUIMethodOverride (m : MethodDefinition) =
 
 and isUIMethod (m : MethodDefinition) =
     if m = null then false
+    else if m.CustomAttributes |> Seq.exists (fun x -> x.Constructor.DeclaringType.Name = "AsyncStateMachineAttribute") then
+        false // TODO: Track down the async method and detect the try
     else
         let dt = m.DeclaringType
         if isUIType dt then true
