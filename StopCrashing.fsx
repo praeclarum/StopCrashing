@@ -33,6 +33,14 @@ let isUIType (t : TypeReference) =
         || n.StartsWith ("MonoTouch.SceneKit.")
         || n.StartsWith ("SceneKit.")
 
+let ignoreCallsToTypes =
+    [
+        "System.nfloat"
+        "System.nint"
+        "System.nuint"
+    ]
+    |> Set.ofList
+
 let isUITypeDescendent (t : TypeReference) =
     if t = null then false
     else (isUIType t) || (isUIType (t.Resolve ()).BaseType)
@@ -61,11 +69,19 @@ and diagnoseUIType t =
     |> Seq.filter isBadMethod
 
 and isBadMethod (m : MethodDefinition, c) : bool =
-    (not m.IsConstructor) && (callsOtherMethods m.Body) && (not m.Body.HasExceptionHandlers)
+    (not m.Body.HasExceptionHandlers) && (callsOtherMethods m.Body) && (not m.IsConstructor)
 
 and isCall (i : Instruction) =
     match i.OpCode.Code with
-    | Code.Call | Code.Calli | Code.Callvirt -> true
+    | Code.Call | Code.Calli | Code.Callvirt ->
+        match i.Operand with
+        | :?MethodReference as mr ->
+            match mr.Resolve () with
+            | null -> true
+            | x ->
+                let skip = ignoreCallsToTypes.Contains (x.DeclaringType.FullName)
+                not skip
+        | _ -> true
     | _ -> false
 
 and callsOtherMethods body =
