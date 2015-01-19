@@ -35,7 +35,9 @@ let isUITypeDescendent (t : TypeReference) =
     if t = null then false
     else (isUIType t) || (isUIType (t.Resolve ()).BaseType)
 
-let rec diagnoseBinary (binPath : string) =
+type Diagnosis = (MethodDefinition * MethodDefinition option) list
+
+let rec diagnoseBinary (binPath : string) : Diagnosis =
     let m = ModuleDefinition.ReadModule (binPath, readerParams binPath)
     let rec getTypes (t : TypeDefinition) =
         t :: (t.NestedTypes |> Seq.collect getTypes |> List.ofSeq)
@@ -142,28 +144,10 @@ and findDels (b : MethodBody) =
 //
 // Find binaries for a solution
 //
+let fixDir (d : string) = d.Replace ('\\', Path.DirectorySeparatorChar)
 
-let diagnoseSln slnPath =
-
-    let dump name arg = printfn "%s = %s" name (sprintf "%A" arg); arg
-
-    let projLineRe = Regex ("""Project\(.*?\)\s*=.*?,\s*\"(.*?)\",""")
-
-    let projLine line =
-        match projLineRe.Match line with
-        | m when m.Success -> Some m.Groups.[1].Value
-        | _ -> None
-
-    let fixDir (d : string) = d.Replace ('\\', Path.DirectorySeparatorChar)
-
-    let projectPaths =
-        let d = Path.GetDirectoryName (slnPath)
-        File.ReadAllLines slnPath
-        |> Seq.choose projLine
-        |> Seq.map (fun x -> Path.Combine (d, fixDir x))
-        |> Seq.filter (fun x -> (Path.GetExtension (x)).Length > 2) // Avoid directories (and ., ..)
-
-    let getProjectBin (projPath : string) : string =
+let diagnoseProj (projPath : string) : Diagnosis =
+    let binPath =
         let proj = XmlDocument ()
         proj.Load projPath
         let projDir = Path.GetDirectoryName projPath
@@ -185,19 +169,35 @@ let diagnoseSln slnPath =
             |> Array.rev
         (Seq.head fileInfos).FullName
 
-    let binPaths =
-        projectPaths
-        |> Seq.fold (fun bs path -> Set.add (getProjectBin path) bs) Set.empty
+    diagnoseBinary binPath
 
-    binPaths
-    |> Seq.collect diagnoseBinary
-    |> Seq.sortBy (fun (m, c) -> m.DeclaringType.FullName + m.Name) |> List.ofSeq
 
+let diagnoseSln slnPath : Diagnosis =
+
+    let dump name arg = printfn "%s = %s" name (sprintf "%A" arg); arg
+
+    let projLineRe = Regex ("""Project\(.*?\)\s*=.*?,\s*\"(.*?)\",""")
+
+    let projLine line =
+        match projLineRe.Match line with
+        | m when m.Success -> Some m.Groups.[1].Value
+        | _ -> None
+
+    let projectPaths =
+        let d = Path.GetDirectoryName (slnPath)
+        File.ReadAllLines slnPath
+        |> Seq.choose projLine
+        |> Seq.map (fun x -> Path.Combine (d, fixDir x))
+        |> Seq.filter (fun x -> (Path.GetExtension (x)).Length > 2) // Avoid directories (and ., ..)
+
+    projectPaths |> Seq.collect diagnoseProj |> List.ofSeq
 
 let diagnoseFile path =
     let badMethods =
         match (Path.GetExtension (path)).ToLowerInvariant () with
         | ".sln" -> diagnoseSln path
+        | ".csproj" -> diagnoseProj path
+        | ".fsproj" -> diagnoseProj path
         | ".dll" | ".exe" -> diagnoseBinary path
         | x -> failwithf "StopCrashing doesn't know what to do with %s files" x
 
