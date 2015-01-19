@@ -17,6 +17,8 @@ let readerParams binPath =
     res.AddSearchDirectory "/Library/Frameworks/Xamarin.Mac.framework/Versions/Current/lib/mono"
     res.AddSearchDirectory "/Library/Frameworks/Xamarin.iOS.framework/Versions/Current/lib/mono/Xamarin.iOS"
     res.AddSearchDirectory "/Library/Frameworks/Xamarin.iOS.framework/Versions/Current/lib/mono/2.1"
+    res.AddSearchDirectory "/Library/Frameworks/Xamarin.iOS.framework/Versions/Current/lib/mono/Xamarin.iOS"
+    res.AddSearchDirectory "/Library/Frameworks/Xamarin.iOS.framework/Versions/Current/lib/mono/2.1/Facades"
     res.AddSearchDirectory (Path.GetDirectoryName (binPath))
     ReaderParameters (AssemblyResolver = res)
 
