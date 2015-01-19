@@ -18,6 +18,7 @@ let readerParams binPath =
     res.AddSearchDirectory "/Library/Frameworks/Xamarin.iOS.framework/Versions/Current/lib/mono/Xamarin.iOS"
     res.AddSearchDirectory "/Library/Frameworks/Xamarin.iOS.framework/Versions/Current/lib/mono/2.1/Facades"
     res.AddSearchDirectory "/Library/Frameworks/Xamarin.iOS.framework/Versions/Current/lib/mono/2.1"
+    res.AddSearchDirectory "/Library/Frameworks/Mono.framework/External/xbuild-frameworks/MonoAndroid/v4.0"
     res.AddSearchDirectory (Path.GetDirectoryName (binPath))
     ReaderParameters (AssemblyResolver = res)
 
@@ -79,8 +80,9 @@ and isCall (i : Instruction) =
             match mr.Resolve () with
             | null -> true
             | x ->
-                let skip = ignoreCallsToTypes.Contains (x.DeclaringType.FullName)
-                not skip
+                let skipProp = mr.Name.StartsWith ("get_") || mr.Name.StartsWith ("set_")
+                let skipType = ignoreCallsToTypes.Contains (x.DeclaringType.FullName)
+                not (skipProp || skipType)
         | _ -> true
     | _ -> false
 
