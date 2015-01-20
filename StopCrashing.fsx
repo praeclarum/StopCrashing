@@ -72,6 +72,10 @@ and diagnoseUIType t =
 and isBadMethod (m : MethodDefinition, c) : bool =
     (not m.Body.HasExceptionHandlers) && (callsOtherMethods m.Body) && (not m.IsConstructor)
 
+and isProperty (m : MethodDefinition) : bool =
+    (m.Name.StartsWith ("get_") || m.Name.StartsWith ("set_")) &&
+        not (m.Name = "get_Item" || m.Name = "set_Item")
+
 and isCall (i : Instruction) =
     match i.OpCode.Code with
     | Code.Call | Code.Calli | Code.Callvirt ->
@@ -79,9 +83,9 @@ and isCall (i : Instruction) =
         | :?MethodReference as mr ->
             match mr.Resolve () with
             | null -> true
-            | x ->
-                let skipProp = mr.Name.StartsWith ("get_") || mr.Name.StartsWith ("set_")
-                let skipType = ignoreCallsToTypes.Contains (x.DeclaringType.FullName)
+            | m ->
+                let skipProp = isProperty m
+                let skipType = ignoreCallsToTypes.Contains (m.DeclaringType.FullName)
                 not (skipProp || skipType)
         | _ -> true
     | _ -> false
@@ -257,7 +261,7 @@ let argv = ["Test.sln"]
 #endif
 
 if argv.Length < 1 then
-    printfn "StopCrashing.fsx [Solution.sln] [Library.dll] [App.exe]"
+    printfn "StopCrashing.fsx [Solution.sln] [Project.csproj] [Library.dll] [App.exe]"
     1
 else
     let badMethods = argv |> List.collect diagnoseFile
