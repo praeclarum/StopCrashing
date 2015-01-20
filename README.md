@@ -1,5 +1,7 @@
 # StopCrashing.fsx
 
+Why run this script? Please read my [blog post](http://praeclarum.org/post/102015518373/stop-crashing).
+
 This script looks for possible ways the OS can call **into** your code. These entrypoints are the potential origins for crashes because there is no useful exception handler on the stack at that time.
 
 What are these calls? Well, there are a lot of them:
