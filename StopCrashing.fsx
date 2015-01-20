@@ -33,6 +33,9 @@ let isUIType (t : TypeReference) =
         || n.StartsWith ("MonoMac.SceneKit.")
         || n.StartsWith ("MonoTouch.SceneKit.")
         || n.StartsWith ("SceneKit.")
+        || n.StartsWith ("MonoMac.WebKit.")
+        || n.StartsWith ("MonoTouch.WebKit.")
+        || n.StartsWith ("WebKit.")
 
 let ignoreCallsToTypes =
     [
