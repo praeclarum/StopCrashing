@@ -175,7 +175,7 @@ and findDels (b : MethodBody) =
 let fixDir (d : string) = d.Replace ('\\', Path.DirectorySeparatorChar)
 
 let diagnoseProj (projPath : string) : Diagnosis =
-    let binPath =
+    try
         let proj = XmlDocument ()
         proj.Load projPath
         let projDir = Path.GetDirectoryName projPath
@@ -195,9 +195,11 @@ let diagnoseProj (projPath : string) : Diagnosis =
             |> Seq.sortBy (fun x -> x.LastWriteTime)
             |> Array.ofSeq
             |> Array.rev
-        (Seq.head fileInfos).FullName
+        let binPath = (Seq.head fileInfos).FullName
 
-    diagnoseBinary binPath
+        diagnoseBinary binPath
+    with ex ->
+        []
 
 
 let diagnoseSln slnPath : Diagnosis =
