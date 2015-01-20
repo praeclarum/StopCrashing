@@ -92,9 +92,12 @@ and callsOtherMethods body =
 and isUIMethodOverride (m : MethodDefinition) =
     (isExportMethod m) || (m.IsVirtual && isUIMethod m)
 
+and shouldIgnoreMethod (m : MethodDefinition) =
+    m.CustomAttributes |> Seq.exists (fun x -> x.Constructor.DeclaringType.Name = "AsyncStateMachineAttribute")
+
 and isUIMethod (m : MethodDefinition) =
     if m = null then false
-    else if m.CustomAttributes |> Seq.exists (fun x -> x.Constructor.DeclaringType.Name = "AsyncStateMachineAttribute") then
+    else if shouldIgnoreMethod m then
         false // TODO: Track down the async method and detect the try
     else
         let dt = m.DeclaringType
@@ -135,7 +138,10 @@ and findDels (b : MethodBody) =
                 match ld.Operand with
                 | :? MethodReference as mr ->
                     let md = mr.Resolve ()
-                    [md, Some m]
+                    if not (shouldIgnoreMethod md) then
+                        [md, Some m]
+                    else
+                        []
                 | _ -> []
             | _ -> []
     let rec isDelegateType (t : TypeDefinition) =
