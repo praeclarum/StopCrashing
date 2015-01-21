@@ -72,10 +72,14 @@ and diagnoseUIType t =
     |> Seq.map (fun m -> m, None)
     |> Seq.filter isBadMethod
 
+and hasExceptionHandler (b : MethodBody) : bool =
+    b.HasExceptionHandlers &&
+        b.ExceptionHandlers |> Seq.exists (fun h -> h.HandlerType = ExceptionHandlerType.Catch)
+
 and isBadMethod (m : MethodDefinition, c) : bool =
     match m.Body with
     | null -> false // This happens with abstract members
-    | b -> (not b.HasExceptionHandlers) && (callsOtherMethods b) && (not m.IsConstructor)
+    | b -> (not (hasExceptionHandler b)) && (callsOtherMethods b) && (not m.IsConstructor)
 
 and isProperty (m : MethodDefinition) : bool =
     (m.Name.StartsWith ("get_") || m.Name.StartsWith ("set_")) &&
