@@ -45,9 +45,9 @@ let ignoreCallsToTypes =
     ]
     |> Set.ofList
 
-let isUITypeDescendent (t : TypeReference) =
+let rec isUITypeDescendent (t : TypeReference) =
     if t = null then false
-    else (isUIType t) || (isUIType (t.Resolve ()).BaseType)
+    else (isUIType t) || (isUITypeDescendent (t.Resolve ()).BaseType)
 
 type Diagnosis = (MethodDefinition * MethodDefinition option) list
 
@@ -73,7 +73,9 @@ and diagnoseUIType t =
     |> Seq.filter isBadMethod
 
 and isBadMethod (m : MethodDefinition, c) : bool =
-    (not m.Body.HasExceptionHandlers) && (callsOtherMethods m.Body) && (not m.IsConstructor)
+    match m.Body with
+    | null -> false // This happens with abstract members
+    | b -> (not b.HasExceptionHandlers) && (callsOtherMethods b) && (not m.IsConstructor)
 
 and isProperty (m : MethodDefinition) : bool =
     (m.Name.StartsWith ("get_") || m.Name.StartsWith ("set_")) &&
